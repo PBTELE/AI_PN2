@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltSight Analytics - 전기차 배터리 시장 대시보드</title>
+    <!-- Tailwind CSS (Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js (Data Visualization) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons (UI Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts (Pretendard) -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fdf2f8',
+                            100: '#fce7f3',
+                            500: '#db2777',
+                            600: '#be185d',
+                            900: '#831843',
+                            accent: '#e11d48' // B2B 신뢰감을 유지하면서도 트렌디한 핑크/로즈톤
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 커스텀 스크롤바 디자인 (B2B 깔끔한 룩) */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- LNB (Left Navigation Bar) -->
+    <aside id="sidebar" class="w-64 bg-brand-900 text-white flex flex-col transition-all duration-300 relative z-20 hidden md:flex">
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-brand-600">
+            <i class="ph ph-lightning text-2xl text-pink-400 mr-2"></i>
+            <span class="text-xl font-bold tracking-tight">VoltSight</span>
+        </div>
+        
+        <!-- Menu Items -->
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <ul class="space-y-1">
+                <li>
+                    <a href="#" class="flex items-center px-6 py-3 bg-brand-600 border-l-4 border-pink-400 text-white">
+                        <i class="ph ph-squares-four text-xl mr-3"></i>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-6 py-3 text-brand-100 hover:bg-brand-600 hover:text-white transition-colors border-l-4 border-transparent hover:border-brand-500">
+                        <i class="ph ph-chart-line-up text-xl mr-3"></i>
+                        <span class="font-medium">Size & Forecast</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-6 py-3 text-brand-100 hover:bg-brand-600 hover:text-white transition-colors border-l-4 border-transparent hover:border-brand-500">
+                        <i class="ph ph-file-text text-xl mr-3"></i>
+                        <span class="font-medium">Reports (PDF)</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-6 py-3 text-brand-100 hover:bg-brand-600 hover:text-white transition-colors border-l-4 border-transparent hover:border-brand-500">
+                        <i class="ph ph-factory text-xl mr-3"></i>
+                        <span class="font-medium">Supply Chain</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <!-- User Profile (Bottom) -->
+        <div class="p-4 border-t border-brand-600 flex items-center">
+            <div class="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-sm font-bold shadow-md">A</div>
+            <div class="ml-3">
+                <p class="text-sm font-medium">Admin User</p>
+                <p class="text-xs text-brand-100">Pro Plan</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full w-full relative">
+        
+        <!-- Top Bar -->
+        <header class="h-16 glass-panel flex items-center justify-between px-4 sm:px-6 z-10 shadow-sm">
+            <!-- Mobile Menu Toggle & Search -->
+            <div class="flex items-center gap-4 flex-1">
+                <button id="mobileMenuBtn" class="md:hidden text-slate-500 hover:text-slate-800 focus:outline-none">
+                    <i class="ph ph-list text-2xl"></i>
+                </button>
+                <div class="relative w-full max-w-md hidden sm:block">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" placeholder="데이터, 기관, 리포트 검색..." class="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-brand-accent focus:bg-white transition-all shadow-inner">
+                </div>
+            </div>
+            
+            <!-- Global Tools -->
+            <div class="flex items-center gap-3 sm:gap-5">
+                <button onclick="showToast('필터 기능은 데이터 연동 후 제공될 예정입니다.')" class="text-slate-500 hover:text-brand-accent transition-colors relative" title="필터">
+                    <i class="ph ph-funnel text-xl"></i>
+                </button>
+                <button onclick="showToast('전체 내보내기 기능은 준비 중입니다.')" class="text-slate-500 hover:text-brand-accent transition-colors relative" title="내보내기">
+                    <i class="ph ph-export text-xl"></i>
+                </button>
+                <div class="h-6 w-px bg-slate-300"></div>
+                <button onclick="showToast('지역별 데이터 필터링 기능은 준비 중입니다.')" class="flex items-center text-sm font-medium text-slate-600 hover:text-slate-900">
+                    <i class="ph ph-globe-hemisphere-west mr-1 text-lg text-slate-400"></i> 글로벌(전체) <i class="ph ph-caret-down ml-1 text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Area (Scrollable) -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full">
+            
+            <div class="mb-6 w-full h-32 sm:h-48 md:h-56 rounded-xl overflow-hidden shadow-sm border border-slate-200">
+                <img src="https://images.unsplash.com/photo-1671782762232-217c587d7f1f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mjh8fCVFQyVBMCU4NCVFQSVCOCVCMCVFQyVCMCVBOHxlbnwwfHwwfHx8MA%3D%3D" 
+                     alt="EV Battery Theme" 
+                     class="w-full h-full object-cover">
+            </div>
+
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">시장 통합 대시보드</h1>
+                    <p class="text-sm text-slate-500 mt-1">전기차 배터리 재활용 시장 전망 (2025-2035 기준)</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="showToast('연도별 데이터가 추가되면 활성화됩니다.')" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 shadow-sm transition flex items-center">
+                        <i class="ph ph-calendar-blank mr-2 text-slate-400"></i> 기준 연도: 2025
+                    </button>
+                </div>
+            </div>
+
+            <!-- 요약 카드 (F-Pattern 고려 상단 배치) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+                <!-- Card 1 -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">2035년 평균 시장규모</p>
+                            <h3 class="text-2xl font-bold text-slate-900">465.0 <span class="text-base font-normal text-slate-500">억 달러</span></h3>
+                        </div>
+                        <div class="p-2 bg-pink-50 text-brand-accent rounded-lg">
+                            <i class="ph ph-chart-bar text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs">
+                        <span class="text-emerald-600 font-medium flex items-center"><i class="ph ph-trend-up mr-1"></i> 고성장 전망</span>
+                        <span class="text-slate-400 ml-2">4개 기관 평균치</span>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">평균 연평균성장률(CAGR)</p>
+                            <h3 class="text-2xl font-bold text-slate-900">30.4 <span class="text-base font-normal text-slate-500">%</span></h3>
+                        </div>
+                        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <i class="ph ph-trend-up text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs">
+                        <span class="text-slate-500">InsightAce 최고치 (40.5%) 기준</span>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">분석 기관 수</p>
+                            <h3 class="text-2xl font-bold text-slate-900">4 <span class="text-base font-normal text-slate-500">곳</span></h3>
+                        </div>
+                        <div class="p-2 bg-slate-100 text-slate-600 rounded-lg">
+                            <i class="ph ph-buildings text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs">
+                        <span class="text-slate-500">데이터 소스 통합 완료 (SSOT)</span>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">주목해야 할 화학물</p>
+                            <h3 class="text-xl font-bold text-slate-900 mt-1">LFP <span class="text-sm font-normal text-slate-500">배터리</span></h3>
+                        </div>
+                        <div class="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                            <i class="ph ph-atom text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center text-xs">
+                        <span class="text-slate-500">유럽 시장 기준 가장 빠른 성장세</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 시각화 차트 위젯 영역 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- 위젯 1: 시장 규모 비교 -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-slate-800">기관별 2035년 시장 규모 전망 (억 달러)</h2>
+                        <button onclick="downloadChart('marketSizeChart', '시장규모전망_차트.png')" class="text-slate-400 hover:text-brand-accent p-1" title="다운로드"><i class="ph ph-download-simple"></i></button>
+                    </div>
+                    <div class="relative flex-1 w-full h-[300px]">
+                        <canvas id="marketSizeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 위젯 2: CAGR 비교 -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-slate-800">기관별 연평균성장률 (CAGR %)</h2>
+                        <button onclick="downloadChart('cagrChart', 'CAGR_차트.png')" class="text-slate-400 hover:text-brand-accent p-1" title="다운로드"><i class="ph ph-download-simple"></i></button>
+                    </div>
+                    <div class="relative flex-1 w-full h-[300px]">
+                        <canvas id="cagrChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 데이터 테이블 영역 -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-lg font-bold text-slate-800">Raw Data (데이터 원본 통합)</h2>
+                    <button id="btnCsvDownload" class="flex items-center text-sm text-brand-accent font-medium hover:text-brand-600 transition-colors">
+                        <i class="ph ph-file-csv mr-1 text-lg"></i> CSV 다운로드
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
+                            <tr>
+                                <th class="px-6 py-4 border-b border-slate-200">조사기관명</th>
+                                <th class="px-6 py-4 border-b border-slate-200">2025년 (억 달러)</th>
+                                <th class="px-6 py-4 border-b border-slate-200">2035년 (억 달러)</th>
+                                <th class="px-6 py-4 border-b border-slate-200">CAGR (%)</th>
+                                <th class="px-6 py-4 border-b border-slate-200">주요 분석/주도 지역</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4 font-medium text-slate-900">Precedence Research</td>
+                                <td class="px-6 py-4">63.1</td>
+                                <td class="px-6 py-4 font-semibold text-brand-600">878.5</td>
+                                <td class="px-6 py-4">30.13%</td>
+                                <td class="px-6 py-4 text-slate-500">- (글로벌 전후방 밸류체인 포함)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4 font-medium text-slate-900">InsightAce Analytic</td>
+                                <td class="px-6 py-4">11.8</td>
+                                <td class="px-6 py-4 font-semibold text-brand-600">349.4</td>
+                                <td class="px-6 py-4 text-emerald-600 font-medium">40.5%</td>
+                                <td class="px-6 py-4">아시아·태평양</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4 font-medium text-slate-900">Global Market Insights</td>
+                                <td class="px-6 py-4">58.0</td>
+                                <td class="px-6 py-4 font-semibold text-brand-600">375.0</td>
+                                <td class="px-6 py-4">20.6%</td>
+                                <td class="px-6 py-4 text-slate-500">- (비자동차용 포함)</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4 font-medium text-slate-900">MarketsandMarkets</td>
+                                <td class="px-6 py-4 text-slate-400">데이터 없음</td>
+                                <td class="px-6 py-4 font-semibold text-brand-600">237.2</td>
+                                <td class="px-6 py-4 text-slate-400">데이터 없음</td>
+                                <td class="px-6 py-4">유럽 (LFP 집중 조명)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <footer class="mt-8 text-center text-sm text-slate-400 pb-4">
+                &copy; 2026 VoltSight Analytics. All data derived from internal market research reports.
+            </footer>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 z-50">
+            <div class="bg-slate-800 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3">
+                <i class="ph ph-info text-pink-400 text-xl"></i>
+                <span id="toastMessage" class="text-sm font-medium">알림 메시지</span>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // 데이터 (입력받은 CSV 요약 기반)
+        const agencies = ['Precedence', 'InsightAce', 'Global Market', 'MarketsandMarkets'];
+        const size2035 = [878.5, 349.4, 375.0, 237.2];
+        const cagrData = [30.13, 40.5, 20.6, 0]; // 0은 데이터 없음 처리용
+
+        // Chart.js 공통 옵션 (디자인 통일성)
+        Chart.defaults.font.family = "'Pretendard', sans-serif";
+        Chart.defaults.color = '#64748b'; // slate-500
+        Chart.defaults.scale.grid.color = '#f1f5f9'; // slate-100
+
+        // 1. 시장 규모 차트 (Bar)
+        const ctxSize = document.getElementById('marketSizeChart').getContext('2d');
+        new Chart(ctxSize, {
+            type: 'bar',
+            data: {
+                labels: agencies,
+                datasets: [{
+                    label: '2035년 시장 규모 (억 달러)',
+                    data: size2035,
+                    backgroundColor: 'rgba(225, 29, 72, 0.85)', // brand-accent (Rose-600)
+                    borderRadius: 6,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, border: { display: false } },
+                    x: { grid: { display: false }, border: { display: false } }
+                }
+            }
+        });
+
+        // 2. CAGR 차트 (Line + Point)
+        const ctxCagr = document.getElementById('cagrChart').getContext('2d');
+        new Chart(ctxCagr, {
+            type: 'line',
+            data: {
+                labels: ['Precedence', 'InsightAce', 'Global Market'], // MarketsandMarkets 제외 (데이터없음)
+                datasets: [{
+                    label: 'CAGR (%)',
+                    data: [30.13, 40.5, 20.6],
+                    borderColor: '#10b981', // emerald-500
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#10b981',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        max: 50,
+                        border: { display: false },
+                        ticks: { callback: function(value) { return value + "%" } }
+                    },
+                    x: { grid: { display: false }, border: { display: false } }
+                }
+            }
+        });
+
+        // 모바일 메뉴 토글 (인터랙션)
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('sidebar');
+        let menuOpen = false;
+
+        mobileMenuBtn.addEventListener('click', () => {
+            menuOpen = !menuOpen;
+            if (menuOpen) {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.add('absolute', 'h-full', 'z-50', 'shadow-2xl');
+            } else {
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('absolute', 'h-full', 'z-50', 'shadow-2xl');
+            }
+        });
+
+        // ----------------------------------------------------
+        // UI 액션 및 버튼 활성화 스크립트 추가
+        // ----------------------------------------------------
+
+        // 1. 토스트 알림 함수
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // 2. 차트 이미지 다운로드 함수
+        function downloadChart(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            
+            // 투명 배경을 하얀색으로 덮기 위한 임시 캔버스 생성
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            ctx.drawImage(canvas, 0, 0);
+            
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+            
+            showToast(`${filename} 다운로드가 완료되었습니다.`);
+        }
+
+        // 3. CSV 데이터 다운로드 이벤트
+        document.getElementById('btnCsvDownload').addEventListener('click', () => {
+            const data = [
+                ['조사기관명', '2025년 (억 달러)', '2035년 (억 달러)', 'CAGR (%)', '주요 분석 및 주도 지역'],
+                ['Precedence Research', '63.1', '878.5', '30.13%', '글로벌 전후방 밸류체인 포함'],
+                ['InsightAce Analytic', '11.8', '349.4', '40.5%', '아시아·태평양'],
+                ['Global Market Insights', '58.0', '375.0', '20.6%', '비자동차용 포함'],
+                ['MarketsandMarkets', '데이터 없음', '237.2', '데이터 없음', '유럽 (LFP 집중 조명)']
+            ];
+            
+            // 한글 깨짐 방지를 위한 UTF-8 BOM 추가
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+                + data.map(e => e.join(",")).join("\n");
+                
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "voltsight_raw_data.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('CSV 데이터 다운로드가 완료되었습니다.');
+        });
+    </script>
+</body>
+</html>
