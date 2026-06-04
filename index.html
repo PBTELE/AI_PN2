@@ -22,12 +22,12 @@
                     },
                     colors: {
                         brand: {
-                            50: '#fdf2f8',
-                            100: '#fce7f3',
-                            500: '#db2777',
-                            600: '#be185d',
-                            900: '#831843',
-                            accent: '#e11d48' // B2B 신뢰감을 유지하면서도 트렌디한 핑크/로즈톤
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            900: '#14532d',
+                            accent: '#10b981' // B2B 신뢰감을 주는 에메랄드/그린 톤
                         }
                     }
                 }
@@ -54,7 +54,7 @@
     <aside id="sidebar" class="w-64 bg-brand-900 text-white flex flex-col transition-all duration-300 relative z-20 hidden md:flex">
         <!-- Logo Area -->
         <div class="h-16 flex items-center px-6 border-b border-brand-600">
-            <i class="ph ph-lightning text-2xl text-pink-400 mr-2"></i>
+            <i class="ph ph-lightning text-2xl text-emerald-400 mr-2"></i>
             <span class="text-xl font-bold tracking-tight">VoltSight</span>
         </div>
         
@@ -62,7 +62,7 @@
         <nav class="flex-1 py-4 overflow-y-auto">
             <ul class="space-y-1">
                 <li>
-                    <a href="#" class="flex items-center px-6 py-3 bg-brand-600 border-l-4 border-pink-400 text-white">
+                    <a href="#" class="flex items-center px-6 py-3 bg-brand-600 border-l-4 border-emerald-400 text-white">
                         <i class="ph ph-squares-four text-xl mr-3"></i>
                         <span class="font-medium">Dashboard</span>
                     </a>
@@ -90,7 +90,7 @@
         
         <!-- User Profile (Bottom) -->
         <div class="p-4 border-t border-brand-600 flex items-center">
-            <div class="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-sm font-bold shadow-md">A</div>
+            <div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold shadow-md">A</div>
             <div class="ml-3">
                 <p class="text-sm font-medium">Admin User</p>
                 <p class="text-xs text-brand-100">Pro Plan</p>
@@ -159,7 +159,7 @@
                             <p class="text-sm font-medium text-slate-500 mb-1">2035년 평균 시장규모</p>
                             <h3 class="text-2xl font-bold text-slate-900">465.0 <span class="text-base font-normal text-slate-500">억 달러</span></h3>
                         </div>
-                        <div class="p-2 bg-pink-50 text-brand-accent rounded-lg">
+                        <div class="p-2 bg-emerald-50 text-brand-accent rounded-lg">
                             <i class="ph ph-chart-bar text-xl"></i>
                         </div>
                     </div>
@@ -304,7 +304,7 @@
         <!-- Toast Notification -->
         <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 z-50">
             <div class="bg-slate-800 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3">
-                <i class="ph ph-info text-pink-400 text-xl"></i>
+                <i class="ph ph-info text-emerald-400 text-xl"></i>
                 <span id="toastMessage" class="text-sm font-medium">알림 메시지</span>
             </div>
         </div>
@@ -331,7 +331,7 @@
                 datasets: [{
                     label: '2035년 시장 규모 (억 달러)',
                     data: size2035,
-                    backgroundColor: 'rgba(225, 29, 72, 0.85)', // brand-accent (Rose-600)
+                    backgroundColor: 'rgba(16, 185, 129, 0.85)', // brand-accent (Emerald-500)
                     borderRadius: 6,
                     barPercentage: 0.6
                 }]
